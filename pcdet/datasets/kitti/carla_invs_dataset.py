@@ -13,7 +13,7 @@ from ..dataset import DatasetTemplate
 D_NAME = 'carla_invs'
 U_NAME = 'CARLA_INVS'
 
-class KittiDataset(DatasetTemplate):
+class CarlaInvsDataset(DatasetTemplate):
     def __init__(self, dataset_cfg, class_names, training=True, root_path=None, logger=None):
         """
         Args:
@@ -437,7 +437,7 @@ class KittiDataset(DatasetTemplate):
         return data_dict
 
 def create_kitti_infos(dataset_cfg, class_names, data_path, save_path, workers=4):
-    dataset = KittiDataset(dataset_cfg=dataset_cfg, class_names=class_names, root_path=data_path, training=False)
+    dataset = CarlaInvsDataset(dataset_cfg=dataset_cfg, class_names=class_names, root_path=data_path, training=False)
     train_split, val_split = 'train', 'val'
 
     train_filename    = save_path / ( '%s_infos_%s.pkl'%(D_NAME, train_split) )
@@ -485,7 +485,7 @@ def create_kitti_infos(dataset_cfg, class_names, data_path, save_path, workers=4
 if __name__ == '__main__':
     import sys
     if len(sys.argv) < 2:
-        print('Usage: python3 carla_invs_dataset create_infos <dataset_config_file> [<dataset_subfolder>]')
+        print('Usage: python3 carla_invs_dataset create_infos <dataset_config_file> [<dataset_folder>]')
         exit(0)
     
     if sys.argv[1] == 'create_infos':
@@ -495,16 +495,16 @@ if __name__ == '__main__':
         from easydict import EasyDict
         ROOT_DIR = (Path(__file__).resolve().parent / '../../../').resolve()
         dataset_cfg = EasyDict( yaml.load(open(sys.argv[2])) )
-        data_folder = Path(ROOT_DIR / sys.argv[3]) if len(sys.argv)>=4 else Path(ROOT_DIR / 'data' / D_NAME)
-        if not Path(data_folder).exists():
-            print('Folder "%s" not exists.'%data_folder)
+        dataset_folder = Path(ROOT_DIR / sys.argv[3]) if len(sys.argv)>=4 else Path(ROOT_DIR / 'data' / D_NAME)
+        if not Path(dataset_folder).exists():
+            print('Folder "%s" not exists.'%dataset_folder)
             exit()
         #
         create_kitti_infos(
             dataset_cfg=dataset_cfg,
             class_names=['Car'],
-            data_path=data_folder,
-            save_path=data_folder
+            data_path=dataset_folder,
+            save_path=dataset_folder
         )
     else:
         pass

@@ -95,19 +95,33 @@ def train_model(model, optimizer, train_loader, model_func, lr_scheduler, optim_
 
             # save trained model
             trained_epoch = cur_epoch + 1
-            if trained_epoch % ckpt_save_interval == 0 and rank == 0:
-
+            if trained_epoch % (total_epochs) == 0 and rank == 0:
                 ckpt_list = glob.glob(str(ckpt_save_dir / 'checkpoint_epoch_*.pth'))
                 ckpt_list.sort(key=os.path.getmtime)
+                #
+                ckpt_name = ckpt_save_dir / ('checkpoint_epoch_%d' % len(ckpt_list))
+                torch.save({
+                    'model_state':model.state_dict(),
+                    'optimizer_state': optimizer.state_dict(),
+                    # 'epoch': start_epoch + total_epochs,
+                    'accumulated_iter': accumulated_iter
+                    }, ckpt_name)
 
-                if ckpt_list.__len__() >= max_ckpt_save_num:
-                    for cur_file_idx in range(0, len(ckpt_list) - max_ckpt_save_num + 1):
-                        os.remove(ckpt_list[cur_file_idx])
+            #NOTE: comment out original ckpt save
+            # trained_epoch = cur_epoch + 1
+            # if trained_epoch % ckpt_save_interval == 0 and rank == 0:
 
-                ckpt_name = ckpt_save_dir / ('checkpoint_epoch_%d' % trained_epoch)
-                save_checkpoint(
-                    checkpoint_state(model, optimizer, trained_epoch, accumulated_iter), filename=ckpt_name,
-                )
+            #     ckpt_list = glob.glob(str(ckpt_save_dir / 'checkpoint_epoch_*.pth'))
+            #     ckpt_list.sort(key=os.path.getmtime)
+
+            #     if ckpt_list.__len__() >= max_ckpt_save_num:
+            #         for cur_file_idx in range(0, len(ckpt_list) - max_ckpt_save_num + 1):
+            #             os.remove(ckpt_list[cur_file_idx])
+
+            #     ckpt_name = ckpt_save_dir / ('checkpoint_epoch_%d' % trained_epoch)
+            #     save_checkpoint(
+            #         checkpoint_state(model, optimizer, trained_epoch, accumulated_iter), filename=ckpt_name,
+            #     )
 
 
 def model_state_to_cpu(model_state):

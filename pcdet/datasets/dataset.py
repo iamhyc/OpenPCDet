@@ -1,6 +1,6 @@
 from collections import defaultdict
 from pathlib import Path
-
+import time
 import numpy as np
 import torch.utils.data as torch_data
 
@@ -17,7 +17,21 @@ class DatasetTemplate(torch_data.Dataset):
         self.training = training
         self.class_names = class_names
         self.logger = logger
-        self.root_path = root_path if root_path is not None else Path(self.dataset_cfg.DATA_PATH)
+        ## Relative to repo root
+        if root_path is not None:
+            self.root_path = root_path
+        else:
+            repo_root = ( Path(__file__).parent/'..'/'..' ).resolve()
+            self.root_path = repo_root / dataset_cfg.DATA_PATH / dataset_cfg.DATA_SUBDIR #Path(self.dataset_cfg.DATA_PATH)
+            # if not self.root_path.exists():
+            #     import os, time
+            #     _,_dirs,_ = next( os.walk(self.root_path.parent) )
+            #     self.root_path = Path(self.root_path.parent,_dirs[0]).resolve()
+            #     pass
+            #
+        print('DATA_PATH set to "%s".'%self.root_path)
+        time.sleep(2.0)
+        ##
         self.logger = logger
         if self.dataset_cfg is None or class_names is None:
             return

@@ -27,7 +27,7 @@ def parse_config():
     parser.add_argument('--workers', type=int, default=8, help='number of workers for dataloader')
     parser.add_argument('--extra_tag', type=str, default='default', help='extra tag for this experiment')
     parser.add_argument('--ckpt', type=str, default=None, help='checkpoint to start from')
-    parser.add_argument('--pretrained_model', type=str, default=None, help='pretrained_model')
+    parser.add_argument('--pretrained_model', nargs='?', type=str, default=None, help='pretrained_model')
     parser.add_argument('--launcher', choices=['none', 'pytorch', 'slurm'], default='none')
     parser.add_argument('--tcp_port', type=int, default=18888, help='tcp port for distrbuted training')
     parser.add_argument('--sync_bn', action='store_true', default=False, help='whether to use sync bn')
@@ -42,12 +42,16 @@ def parse_config():
     parser.add_argument('--max_waiting_mins', type=int, default=0, help='max waiting minutes')
     parser.add_argument('--start_epoch', type=int, default=0, help='')
     parser.add_argument('--save_to_file', action='store_true', default=False, help='')
+    #
+    parser.add_argument('--root_dir', type=str, help="root working path")
+    parser.add_argument('--data_subdir', type=str, default='default')
 
     args = parser.parse_args()
 
     cfg_from_yaml_file(args.cfg_file, cfg)
     cfg.TAG = Path(args.cfg_file).stem
     cfg.EXP_GROUP_PATH = '/'.join(args.cfg_file.split('/')[1:-1])  # remove 'cfgs' and 'xxxx.yaml'
+    cfg.DATA_CONFIG.DATA_SUBDIR = args.data_subdir
 
     if args.set_cfgs is not None:
         cfg_from_list(args.set_cfgs, cfg)
@@ -77,8 +81,11 @@ def main():
     if args.fix_random_seed:
         common_utils.set_random_seed(666)
 
+    if args.root_dir:
+        cfg.ROOT_DIR = Path(args.root_dir)
     output_dir = cfg.ROOT_DIR / 'output' / cfg.EXP_GROUP_PATH / cfg.TAG / args.extra_tag
-    ckpt_dir = output_dir / 'ckpt'
+    # ckpt_dir = output_dir / 'ckpt'
+    ckpt_dir = cfg.ROOT_DIR / 'model'
     output_dir.mkdir(parents=True, exist_ok=True)
     ckpt_dir.mkdir(parents=True, exist_ok=True)
 
@@ -119,23 +126,31 @@ def main():
 
     optimizer = build_optimizer(model, cfg.OPTIMIZATION)
 
-    # load checkpoint if it is possible
+    #NOTE: modified to adapt to federated learning
     start_epoch = it = 0
-    last_epoch = -1
-    if args.pretrained_model is not None:
+    # last_epoch = -1
+    if args.pretrained_model is not None:                           # not first time
         model.load_params_from_file(filename=args.pretrained_model, to_cpu=dist, logger=logger)
+        model_dict  = torch.load(args.pretrained_model)
+        # start_epoch = model_dict['epoch']
+        it          = model_dict['accumulated_iter']
+        optimizer.load_state_dict( model_dict['optimizer_state'] )
+    else:                                                           # first time
+        start_epoch = 0
+    last_epoch = start_epoch + 1
 
-    if args.ckpt is not None:
-        it, start_epoch = model.load_params_with_optimizer(args.ckpt, to_cpu=dist, optimizer=optimizer, logger=logger)
-        last_epoch = start_epoch + 1
-    else:
-        ckpt_list = glob.glob(str(ckpt_dir / '*checkpoint_epoch_*.pth'))
-        if len(ckpt_list) > 0:
-            ckpt_list.sort(key=os.path.getmtime)
-            it, start_epoch = model.load_params_with_optimizer(
-                ckpt_list[-1], to_cpu=dist, optimizer=optimizer, logger=logger
-            )
-            last_epoch = start_epoch + 1
+    #NOTE: comment to original ckpt loading
+    # if args.ckpt is not None:
+    #     it, start_epoch = model.load_params_with_optimizer(args.ckpt, to_cpu=dist, optimizer=optimizer, logger=logger)
+    #     last_epoch = start_epoch + 1
+    # else:
+    #     ckpt_list = glob.glob(str(ckpt_dir / '*checkpoint_epoch_*.pth'))
+    #     if len(ckpt_list) > 0:
+    #         ckpt_list.sort(key=os.path.getmtime)
+    #         it, start_epoch = model.load_params_with_optimizer(
+    #             ckpt_list[-1], to_cpu=dist, optimizer=optimizer, logger=logger
+    #         )
+    #         last_epoch = start_epoch + 1
 
     model.train()  # before wrap to DistributedDataParallel to support fixed some parameters
     if dist_train:
@@ -173,25 +188,27 @@ def main():
     logger.info('**********************End training %s/%s(%s)**********************\n\n\n'
                 % (cfg.EXP_GROUP_PATH, cfg.TAG, args.extra_tag))
 
-    logger.info('**********************Start evaluation %s/%s(%s)**********************' %
-                (cfg.EXP_GROUP_PATH, cfg.TAG, args.extra_tag))
-    test_set, test_loader, sampler = build_dataloader(
-        dataset_cfg=cfg.DATA_CONFIG,
-        class_names=cfg.CLASS_NAMES,
-        batch_size=args.batch_size,
-        dist=dist_train, workers=args.workers, logger=logger, training=False
-    )
-    eval_output_dir = output_dir / 'eval' / 'eval_with_train'
-    eval_output_dir.mkdir(parents=True, exist_ok=True)
-    args.start_epoch = max(args.epochs - 10, 0)  # Only evaluate the last 10 epochs
 
-    repeat_eval_ckpt(
-        model.module if dist_train else model,
-        test_loader, args, eval_output_dir, logger, ckpt_dir,
-        dist_test=dist_train
-    )
-    logger.info('**********************End evaluation %s/%s(%s)**********************' %
-                (cfg.EXP_GROUP_PATH, cfg.TAG, args.extra_tag))
+    #NOTE: comment out the evaluation part
+    # logger.info('**********************Start evaluation %s/%s(%s)**********************' %
+    #             (cfg.EXP_GROUP_PATH, cfg.TAG, args.extra_tag))
+    # test_set, test_loader, sampler = build_dataloader(
+    #     dataset_cfg=cfg.DATA_CONFIG,
+    #     class_names=cfg.CLASS_NAMES,
+    #     batch_size=args.batch_size,
+    #     dist=dist_train, workers=args.workers, logger=logger, training=False
+    # )
+    # eval_output_dir = output_dir / 'eval' / 'eval_with_train'
+    # eval_output_dir.mkdir(parents=True, exist_ok=True)
+    # args.start_epoch = max(args.epochs - 10, 0)  # Only evaluate the last 10 epochs
+
+    # repeat_eval_ckpt(
+    #     model.module if dist_train else model,
+    #     test_loader, args, eval_output_dir, logger, ckpt_dir,
+    #     dist_test=dist_train
+    # )
+    # logger.info('**********************End evaluation %s/%s(%s)**********************' %
+    #             (cfg.EXP_GROUP_PATH, cfg.TAG, args.extra_tag))
 
 
 if __name__ == '__main__':
