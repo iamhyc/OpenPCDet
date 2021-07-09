@@ -33,5 +33,5 @@ prepare:
 	python -m pcdet.datasets.kitti.carla_invs_dataset create_infos tools/cfgs/dataset_configs/carla_invs_dataset.yaml ${DATASET}
 
 train:
-	cd tools; python train.py --cfg_file cfgs/carla_invs_models/second.yaml --batch_size 1 --workers 0 --epochs 1 --pretrained_model ${CKPT}
+	cd tools; python train.py --cfg_file cfgs/carla_invs_models/second.yaml --batch_size 1 --workers 0 --epochs 1 --pretrained_model ${CKPT} --data_subdir ${DATASET}
 

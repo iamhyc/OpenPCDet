@@ -44,7 +44,7 @@ def parse_config():
     parser.add_argument('--save_to_file', action='store_true', default=False, help='')
     #
     parser.add_argument('--root_dir', type=str, help="root working path")
-    parser.add_argument('--data_subdir', type=str, default='default')
+    parser.add_argument('--data_subdir', nargs='?', type=str, default='default')
 
     args = parser.parse_args()
 

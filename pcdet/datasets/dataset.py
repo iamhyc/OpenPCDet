@@ -29,8 +29,8 @@ class DatasetTemplate(torch_data.Dataset):
             #     self.root_path = Path(self.root_path.parent,_dirs[0]).resolve()
             #     pass
             #
-        print('DATA_PATH set to "%s".'%self.root_path)
-        time.sleep(2.0)
+        print('\nDATA_PATH set to "%s".\n'%self.root_path)
+        time.sleep(1.5)
         ##
         self.logger = logger
         if self.dataset_cfg is None or class_names is None:
