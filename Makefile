@@ -23,7 +23,7 @@ install-spconv:
 	cd build/spconv; python3 setup.py bdist_wheel; cd ./dist; pip3 install *.whl --force	
 
 check-dependency:
-    @echo "Please ensure that a) conda env is activated; b) NVIDIA Driver 460+ is installed."
+	@echo "Please ensure that a) conda env is activated; b) NVIDIA Driver 460+ is installed."; read -p ''
     # #check nvidia driver; `nvidia-smi | grep -oEi '[0-9]{3}\.[0-9]*'`
     # #check conda
     # #check conda environment
